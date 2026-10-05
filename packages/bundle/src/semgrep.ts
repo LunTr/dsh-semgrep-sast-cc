@@ -79,7 +79,7 @@ export async function runSemgrep(
     },
     graceMs: TERMINATION_GRACE_MS,
     signal,
-    env: { ...request.runtime.environment },
+    env: { ...request.runtime.environment, PYTHONUTF8: '1' },
   })
   const outcome = await processHandle.done
   const durationMs = Date.now() - startedAt

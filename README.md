@@ -38,7 +38,11 @@ installs `@aaub-software/semgrep-runtime-win32-x64` on compatible systems.
 | Parameter | Required | Description |
 | --- | --- | --- |
 | `paths` | No | Workspace-relative files or directories. Defaults to the workspace root. |
-| `ruleset` | No | Rule configuration. The current release supports only `p/default`. |
+| `ruleset` | No | `p/default` Registry rules or bundled offline `cwe-audit`. |
+| `focus_cwes` | No | Prioritize canonical CWE IDs before truncation. |
+| `diversify` | No | Round-robin each relevance tier across files; default false. |
+| `max_findings` | No | Return 1..200 results within the configured cap. |
+| `context_lines` | No | Nearby source lines, 0..20; default 0. |
 | `sandbox_permissions` | Only for an approved retry | `workspace-write` or `danger-full-access`. |
 | `justification` | With `sandbox_permissions` | One sentence shown with the permission request. |
 
@@ -144,6 +148,38 @@ access is never requested silently or treated as a standing permission by this t
 - Model-facing findings are deterministically ordered and capped; truncation is
   reported separately from partial scan coverage.
 
+### Optional CWE Audit
+
+Version 0.3 adds an offline `cwe-audit` ruleset for CWE-20, 22/36 and 400/770.
+Its 13 syntax rules cover Go, JavaScript/TypeScript, Python, Java and Rust operations.
+They intentionally return audit candidates in guarded code as well. Confirm an
+attacker-controlled input, reachable operation and missing or bypassable control
+before reporting a vulnerability. Unsupported operations and interprocedural routes
+still require source review.
+
+```json
+{
+  "ruleset": "cwe-audit",
+  "focus_cwes": ["CWE-22"],
+  "diversify": true,
+  "max_findings": 8,
+  "context_lines": 12
+}
+```
+
+`focus_cwes` orders exact and related CWE evidence before response truncation.
+`diversify` distributes each relevance tier across files. Neither removes findings
+from the total: omitted findings still set `summary.truncated`. `context_lines`
+adds up to 20 lines on either side of each selected match's start line, limited to
+3000 characters per finding and 24000 characters per response. Context is untrusted
+source data, including nearby guards, and may be incomplete. Reads stay inside the
+workspace and files above 512 KiB are skipped with an informational diagnostic.
+An unreadable context does not change the scanner's coverage status.
+
+All controls are opt-in. `p/default` retains its original ordering and result shape
+when no new controls are supplied. The offline rules use the pinned Semgrep engine
+and require no Registry access; they remain subject to normal process permissions.
+
 The default `p/default` ruleset is fetched from the Semgrep Registry at scan time, so a
 scan requires network access when the rules are not already available in the temporary
 environment. Registry rules are not redistributed by this project.
@@ -221,7 +257,11 @@ dsh plugin --profile web add @aaub-software/dsh-semgrep-sast
 | 参数 | 是否必需 | 说明 |
 | --- | --- | --- |
 | `paths` | 否 | 工作区相对文件或目录；默认扫描工作区根目录。 |
-| `ruleset` | 否 | 规则配置；当前版本只支持 `p/default`。 |
+| `ruleset` | 否 | Registry 的 `p/default` 或内置离线规则 `cwe-audit`。 |
+| `focus_cwes` | 否 | 截断前优先返回指定 CWE 的相关候选。 |
+| `diversify` | 否 | 在相关性层级内按文件轮流取候选；默认关闭。 |
+| `max_findings` | 否 | 返回 1..200 条结果，同时受配置上限约束。 |
+| `context_lines` | 否 | 命中起始行前后的源码行数，0..20；默认 0。 |
 | `sandbox_permissions` | 仅批准重试时 | 可选值为 `workspace-write` 或 `danger-full-access`。 |
 | `justification` | 与权限参数一起使用 | 展示给用户的一句话权限申请理由。 |
 

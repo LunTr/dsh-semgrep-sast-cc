@@ -18,6 +18,7 @@ export type {
   SemgrepEvidence,
   SemgrepMatchedCodeEvidence,
   SemgrepMetavariablesEvidence,
+  SemgrepSourceContextEvidence,
   SemgrepSastScanResult,
   SemgrepSastScanResult as SemgrepScanResult,
 } from './agent-result.js'

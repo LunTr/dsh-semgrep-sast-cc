@@ -1,5 +1,6 @@
 import { realpath, stat } from 'node:fs/promises'
 import { isAbsolute, relative, resolve, sep } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-sandbox-policy'
 import type {} from '@deepseek-ai/dsh-user-approval'
@@ -17,6 +18,7 @@ import {
 import { DEFAULT_RULESET, type ResolvedConfig } from './config.js'
 import type { ResolvedRuntime } from './runtime.js'
 import { runSemgrep } from './semgrep.js'
+import { attachSourceContext } from './source-context.js'
 import type { SemgrepScanInput } from './types.js'
 
 function isInside(root: string, candidate: string): boolean {
@@ -134,6 +136,9 @@ export function createSemgrepScanTool(
       + 'On Windows, Semgrep Core cannot open the system certificate store under the Harness ACL sandbox. '
       + 'Call normally first; after the reported denial, retry the exact scan once with '
       + 'sandbox_permissions="danger-full-access" and a one-sentence justification so Harness can ask the user for approval. '
+      + 'Use cwe-audit for offline path, resource and input-validation audit candidates. '
+      + 'Use focus_cwes, diversify and context_lines to inspect relevant inputs and guards. '
+      + 'Audit matches are navigation signals, including guarded code; verify reachability before reporting. '
       + 'Returns the versioned ssc-sast/v1 normalized result contract.',
     parameters: {
       paths: {
@@ -143,10 +148,17 @@ export function createSemgrepScanTool(
       },
       ruleset: {
         type: 'string',
-        enum: [DEFAULT_RULESET],
+        enum: [DEFAULT_RULESET, 'cwe-audit'],
         default: DEFAULT_RULESET,
-        description: 'Semgrep Registry ruleset to use. The first release supports p/default.',
+        description: 'p/default uses the Registry; cwe-audit uses bundled offline audit rules.',
       },
+      focus_cwes: {
+        type: 'array', items: { type: 'string' },
+        description: 'Prioritize canonical CWE IDs before truncation, e.g. CWE-22. Other findings remain available.',
+      },
+      diversify: { type: 'boolean', description: 'Round-robin findings across files within each CWE relevance tier.' },
+      context_lines: { type: 'integer', description: 'Source lines before and after the matched start line, 0..20. Default 0.' },
+      max_findings: { type: 'integer', description: 'Return 1..200 findings, within the configured cap.' },
       sandbox_permissions: {
         type: 'string',
         enum: ['workspace-write', 'danger-full-access'],
@@ -202,15 +214,31 @@ export function createSemgrepScanTool(
       if (args.paths !== undefined && args.paths.length === 0) {
         throw new Error('semgrep_scan: paths must not be an empty array')
       }
-      if (args.ruleset !== undefined && args.ruleset !== config.defaultRuleset) {
+      if (args.ruleset !== undefined && args.ruleset !== DEFAULT_RULESET && args.ruleset !== 'cwe-audit') {
         throw new Error(`semgrep_scan: ruleset ${JSON.stringify(args.ruleset)} is not available`)
       }
-      validateEscalationArgs(args.sandbox_permissions, args.justification)
-
+      const maxFindings = args.max_findings ?? config.maxFindings
+      if (!Number.isInteger(maxFindings) || maxFindings < 1 || (args.max_findings !== undefined && maxFindings > Math.min(200, config.maxFindings))) {
+        throw new Error('semgrep_scan: max_findings must be 1..200 within the configured cap')
+      }
+      const contextLines = args.context_lines ?? 0
+      if (!Number.isInteger(contextLines) || contextLines < 0 || contextLines > 20) {
+        throw new Error('semgrep_scan: context_lines must be 0..20')
+      }
+      if (args.focus_cwes?.some(cwe => !/^CWE-[1-9][0-9]*$/.test(cwe))) {
+        throw new Error('semgrep_scan: focus_cwes must contain canonical CWE identifiers')
+      }
       const standingPolicy = ctx.sandboxPolicy.resolve(
         exec.agent === undefined ? {} : { session: exec.agent.session },
       )
+      const modeOrder = { 'read-only': 0, 'workspace-write': 1, 'danger-full-access': 2 }
+      const needsEscalation = args.sandbox_permissions !== undefined
+        && modeOrder[args.sandbox_permissions] > modeOrder[standingPolicy.mode]
+      if (needsEscalation || args.sandbox_permissions === undefined) {
+        validateEscalationArgs(args.sandbox_permissions, args.justification)
+      }
       const approvedMode = args.sandbox_permissions !== undefined && args.justification !== undefined
+        && needsEscalation
         ? await approveEscalation(
             {
               requestedMode: args.sandbox_permissions,
@@ -248,16 +276,24 @@ export function createSemgrepScanTool(
 
       const targets = await resolveTargets(workspaceRoot, args.paths ?? ['.'])
       exec.signal.throwIfAborted()
+      const ruleset = args.ruleset ?? config.defaultRuleset
+      const selectedConfig = ruleset === 'cwe-audit'
+        ? fileURLToPath(new URL('../rules/cwe-audit.json', import.meta.url))
+        : configSpecifier
       const scan = await runSemgrep(ctx, {
         runtime,
         cwd: workspaceRoot,
         targets,
-        configSpecifier,
+        configSpecifier: selectedConfig,
         timeoutMs: config.timeoutMs,
         signal: exec.signal,
         sandboxPolicy,
       })
-      return createSemgrepSastResult(scan, configSpecifier, config.maxFindings)
+      const result = createSemgrepSastResult(scan, ruleset, maxFindings, {
+        ...(args.focus_cwes === undefined ? {} : { focusCwes: args.focus_cwes }),
+        ...(args.diversify === undefined ? {} : { diversify: args.diversify }),
+      })
+      return attachSourceContext(result, workspaceRoot, contextLines)
     },
   })
 }

@@ -5,7 +5,7 @@ model-facing `semgrep_scan` tool in
 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
 
 The default managed runtime supports Windows x64 and includes CPython 3.14.7
-and Semgrep 1.175.0. Users do not need to install Python or Semgrep separately.
+and Semgrep 1.163.0. Users do not need to install Python or Semgrep separately.
 
 ## Install
 
@@ -23,7 +23,11 @@ Restart the profile after installation. The agent will then see the
 
 - Scans only workspace-relative files and directories.
 - Rejects paths and resolved symlinks that escape the active workspace.
-- Uses the Semgrep Registry `p/default` ruleset.
+- Defaults to Semgrep Registry `p/default`; supports opt-in bundled `cwe-audit` rules.
+- Supports `focus_cwes`, `diversify`, `max_findings` (1..200 within the configured cap)
+  and bounded `context_lines` (0..20) for source review. Defaults preserve prior behavior.
+- Audit matches include guarded code. Verify input, reachability and effective controls
+  before reporting; a scan match is a navigation candidate.
 - Does not expose autofix and disables Semgrep metrics.
 - Redirects Semgrep cache, settings, configuration, and logs to the temporary
   scan environment.

@@ -1,6 +1,6 @@
 {
   "name": "@aaub-software/dsh-semgrep-sast",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Semgrep SAST bundle and model-facing scan tool for DeepSeek Harness.",
   "license": "MIT",
   "repository": {
@@ -34,7 +34,8 @@
     "lib/**/*.js",
     "lib/**/*.d.ts",
     "lib/**/*.map",
-    "cordis.patch.yml"
+    "cordis.patch.yml",
+    "rules/*.json"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",

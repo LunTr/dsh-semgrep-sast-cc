@@ -42,6 +42,7 @@ test('preserves targets and enables diagnostics without changing project-root or
     'python', 'launcher.py', 'scan', '--json', '--verbose', '--metrics=off', '--config', 'p/default', 'src',
   ])
   assert.equal(ctx.captured.cwd, request.cwd)
+  assert.equal(ctx.captured.env.PYTHONUTF8, '1')
 })
 
 test('timeout keeps the start and end of stderr with a bounded diagnostic', async () => {

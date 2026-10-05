@@ -6,7 +6,11 @@ export interface SemgrepScanInput {
   /** Workspace-relative files or directories. Defaults to the workspace root. */
   paths?: string[]
   /** Semgrep Registry ruleset used by the first release. */
-  ruleset?: 'p/default'
+  ruleset?: 'p/default' | 'cwe-audit'
+  focus_cwes?: string[]
+  diversify?: boolean
+  context_lines?: number
+  max_findings?: number
   /** One-shot wider mode requested after a sandbox denial. */
   sandbox_permissions?: 'workspace-write' | 'danger-full-access'
   /** User-facing reason required with `sandbox_permissions`. */
