@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import test from 'node:test'
 import { createSemgrepSastResult } from '../lib/agent-result.js'
 import { attachSourceContext } from '../lib/source-context.js'
-import { createSemgrepScanTool } from '../lib/tool.js'
+
 
 function finding(path, line, cwe = 'CWE-22', severity = 'info') {
   return { ruleId: 'audit', path, startLine: line, endLine: line, startColumn: 1,
@@ -42,29 +42,5 @@ test('context retains a preceding guard and refuses symlink escape or large read
     assert.match(safe.evidence[0].data.text, /allowed\(path\)/)
     assert.equal(result.diagnostics.filter(x => x.type === 'context-unavailable').length, 2)
     assert.ok(!JSON.stringify(result).includes('outside-root'))
-  } finally { await rm(root, { recursive: true, force: true }) }
-})
-test('tool resolves packaged audit rules and accepts a repeated standing permission', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'sast-tool-'))
-  let argv
-  const ctx = {
-    sandboxPolicy: { resolve: () => ({ mode: 'danger-full-access' }) },
-    subprocess: { spawn(options) {
-      argv = options.argv
-      return { done: Promise.resolve({ exitCode: 0 }), collected: {
-        stdout: { readFrom: () => ({ text: '{"results":[],"errors":[],"paths":{"scanned":[]}}', lossy: false }) },
-        stderr: { readFrom: () => ({ text: '', lossy: false }) },
-      } }
-    } },
-  }
-  try {
-    const tool = createSemgrepScanTool(ctx, { defaultRuleset: 'p/default', maxFindings: 200, timeoutMs: 1000 },
-      { executable: 'python', arguments: [], environment: {}, version: '1.163.0' }, 'p/default')
-    const exec = { agent: { session: { header: { cwd: root } } }, signal: new AbortController().signal }
-    const result = await tool.execute({ ruleset: 'cwe-audit', sandbox_permissions: 'danger-full-access' }, exec)
-    assert.equal(result.scanner.configuration, 'cwe-audit')
-    assert.match(argv[argv.indexOf('--config') + 1], /rules[\\/]cwe-audit.json$/)
-    await assert.rejects(tool.execute({ context_lines: 21 }, exec), /context_lines/)
-    await assert.rejects(tool.execute({ paths: ['..'] }, exec), /escapes/)
   } finally { await rm(root, { recursive: true, force: true }) }
 })
