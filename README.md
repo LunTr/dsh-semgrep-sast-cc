@@ -12,10 +12,10 @@ mcp__dsh-semgrep-sast-cc__semgrep_scan
 
 需要 **Node.js 24+** 和支持 Mod 的 **Claude Code CLI 2.1.287+**。本版在 Windows x64、Node 24.13.0、Claude Code 2.1.291 上验证。
 
-本版本发布在原仓库的 [`claude-code-mod` 分支](https://github.com/Baiiduu/dsh-semgrep-sast/tree/claude-code-mod)，插件位于分支根目录：
+本版本发布在 fork 仓库的 [`claude-code-mod` 分支](https://github.com/LunTr/dsh-semgrep-sast-cc/tree/claude-code-mod)，插件位于分支根目录。上游项目为 [Baiiduu/dsh-semgrep-sast](https://github.com/Baiiduu/dsh-semgrep-sast)。
 
 ```powershell
-git clone --branch claude-code-mod --single-branch https://github.com/Baiiduu/dsh-semgrep-sast.git dsh-semgrep-sast-cc
+git clone --branch claude-code-mod --single-branch https://github.com/LunTr/dsh-semgrep-sast-cc.git dsh-semgrep-sast-cc
 ```
 
 下载后按下述步骤准备 Semgrep 运行时，再从待扫描项目启动 Claude Code。
@@ -125,7 +125,7 @@ Mod 随 Claude Plugin 分发，可使用以下渠道：
 
 Anthropic Directory 与 `claude-plugins-official` 是不同的发布入口；官方文档说明，后者通过 Anthropic 合作联系人咨询上架。Directory 的本地验证通过后，门户还会运行额外规则检查。
 
-公开目录上架前需落实 Windows 运行时的分发：上传 0.1.1 npm 包或提供带第三方许可的运行时包。Claude 安装插件后仍需上述运行时安装步骤；本插件不会自动下载依赖。源码通过原仓库的 `claude-code-mod` 分支分发，尚未提交外部插件目录。
+公开目录上架前需落实 Windows 运行时的分发：上传 0.1.1 npm 包或提供带第三方许可的运行时包。Claude 安装插件后仍需上述运行时安装步骤；本插件不会自动下载依赖。源码通过 fork 仓库的 `claude-code-mod` 分支分发，尚未提交外部插件目录。
 
 ## English
 

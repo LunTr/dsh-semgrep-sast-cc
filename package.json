@@ -5,8 +5,8 @@
   "type": "module",
   "description": "Claude Code Mod adapter for the DSH Semgrep SAST scanner.",
   "license": "MIT",
-  "repository": { "type": "git", "url": "git+https://github.com/Baiiduu/dsh-semgrep-sast.git" },
-  "homepage": "https://github.com/Baiiduu/dsh-semgrep-sast/tree/claude-code-mod#readme",
+  "repository": { "type": "git", "url": "git+https://github.com/LunTr/dsh-semgrep-sast-cc.git" },
+  "homepage": "https://github.com/LunTr/dsh-semgrep-sast-cc/tree/claude-code-mod#readme",
   "engines": { "node": ">=24" },
   "scripts": {
     "test": "node --test tests/*.test.mjs",
